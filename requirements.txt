@@ -1,0 +1,4 @@
+dotenv==0.9.9
+psycopg2==2.9.13
+psycopg2-binary==2.9.13
+python-dotenv==1.2.4
