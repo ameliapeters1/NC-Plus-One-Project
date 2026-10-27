@@ -1,4 +1,7 @@
 def drop_tables(conn):
+    """
+    Drop the database tables required to enable them to be freshly created. 
+    """ 
     cursor = conn.cursor()
     tables = ["rsvps", "events", "venues","users"]
     for table in tables:

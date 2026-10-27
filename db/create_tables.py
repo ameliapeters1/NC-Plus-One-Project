@@ -1,4 +1,12 @@
 def create_tables(conn):
+    """
+    Create the database tables required. 
+    Creates four tables: 
+        - users: stores user account details,
+        - venues: stores venue information and capacity
+        - events: stores event details, organisers and venue references
+        - rsvps: stores user reservations for events.
+    """
     with conn.cursor() as cursor:
         users = """ CREATE TABLE users (
                     id SERIAL PRIMARY KEY,

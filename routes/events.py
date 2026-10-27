@@ -6,6 +6,9 @@ router = APIRouter(prefix="/api/events", tags=["events"])
 
 @router.get("")
 def get_events():
+    """
+    Retrieve all events ordered by their start time in ascending order.
+    """
     conn = get_connection()
     with conn.cursor() as cur:
         cur.execute("""SELECT events.id, title, starts_at, ends_at, venues.name 
@@ -24,6 +27,9 @@ def get_events():
 
 @router.get("/{id}")
 def get_event_by_id(id:int):
+    """
+    Retrieve a single event by its ID.
+    """
     if id<=0:
         raise HTTPException(
             status_code=400, 

@@ -47,6 +47,9 @@ def insert_rsvp_info(conn):
     
 
 def insert_info(conn):
+    """
+    Insert all data into the appropriate tables of the database.
+    """
     insert_user_info(conn)
     insert_venue_info(conn)
     insert_event_info(conn)
