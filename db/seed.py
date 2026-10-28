@@ -1,7 +1,7 @@
-from connection import get_connection
-from drop_tables import drop_tables
-from create_tables import create_tables
-from insert_into_tables import insert_info
+from db.connection import get_connection
+from db.drop_tables import drop_tables
+from db.create_tables import create_tables
+from db.insert_into_tables import insert_info
 
 def seed():
     """

@@ -1,4 +1,5 @@
 import json 
+from auth.passwords import hash_password
 
 def load_json(filepath):
     with open(filepath) as file:
@@ -11,7 +12,7 @@ def insert_user_info(conn):
     with conn.cursor() as cursor:
         for user in users:
             cursor.execute(insert_statement_users,
-                       (user["email"], user["password"],user["name"]))
+                       (user["email"], hash_password(user["password"]),user["name"]))
     
 
 def insert_venue_info(conn):
