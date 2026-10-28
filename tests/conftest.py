@@ -1,14 +1,19 @@
 import os
-import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.environ["ENV"] = "test"
 
 import pytest
 from fastapi.testclient import TestClient
 
-from db.connection import get_connection
+from db.seed import seed
 from main import app
 
+@pytest.fixture(autouse=True)
+def seed_test_db():
+    database = os.getenv("PGDATABASE", "")
+    assert database.endswith("_test"), f"Refusing to seed non-test database {database!r}"
+
+    seed()
 
 @pytest.fixture
 def client():

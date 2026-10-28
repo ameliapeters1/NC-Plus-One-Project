@@ -3,10 +3,12 @@ from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
 
 from routes.events import router as events_router
+from routes.auth import router as auth_router
 
 
 app = FastAPI(title="Booking API", debug=True)
 app.include_router(events_router)
+app.include_router(auth_router)
 
 
 @app.exception_handler(HTTPException)
