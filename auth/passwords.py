@@ -10,9 +10,6 @@ def hash_password(password:str) -> str:
     return bcrypt.hashpw(password.encode(),bcrypt.gensalt(rounds)).decode()
 
 def verify_password(password:str, hashed_password:str) -> bool:
-    print("Hash value:", repr(hashed_password))
-    print("Hash length:", len(hashed_password))
-    print("Hash prefix:", hashed_password[:4])
     return bcrypt.checkpw(password.encode(), hashed_password.encode())
 
 def get_secret():
