@@ -3,9 +3,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt
 
 from db.connection import get_connection
-from auth.passwords import get_secret
-
-
+from auth.users import check_credentials
+from fetch_info.fetch import get_rsvp
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 bearer_scheme = HTTPBearer()
@@ -79,22 +78,7 @@ def rsvp(event_id: int,
     """
     conn = get_connection()
 
-    # check credentials
-    unauthorised = HTTPException(
-        status_code=401, 
-        detail = {"code":"Not Authenticated"},
-        headers = {"WWW-Authenticate": "Bearer"})
-
-    if credentials is None:
-        raise unauthorised
-
-    try: 
-        payload = jwt.decode(credentials.credentials, get_secret(), algorithms=["HS256"])
-        user_id = int(payload["sub"])
-
-    except: # not valid credentials
-        raise unauthorised
-
+    user_id = check_credentials(credentials)
 
     with conn.cursor() as cur:
         cur.execute("""SELECT events.id, title, starts_at, ends_at, venues.name 
@@ -108,12 +92,8 @@ def rsvp(event_id: int,
         raise HTTPException(status_code=404,
                             detail={"code":"Not Found", "message": "event not found"})
 
-    with conn.cursor() as cursor:
-        cursor.execute("""SELECT id, attendee_id, event_id, created_at
-                    FROM rsvps 
-                    WHERE attendee_id = %s AND event_id = %s""",
-                    (user_id,event_id))
-        already_rsvp = cursor.fetchall()
+    already_rsvp = get_rsvp(user_id, event_id)
+
     if already_rsvp:
         raise HTTPException(status_code=409,
                             detail={"code":"Conflict", "message":"Already RSVPed"})
@@ -139,4 +119,22 @@ def rsvp(event_id: int,
 
         return {"rsvp": rsvp}
 
-    
+@router.delete("/{event_id}/rsvp/me", status_code= 204)
+def rsvp(event_id: int, 
+         credentials : HTTPAuthorizationCredentials | None = Depends(bearer_scheme)):
+    """
+    Delete an event RSVP by event ID as an authenticated user.
+    """
+    conn = get_connection()
+
+    user_id = check_credentials(credentials)
+    rsvp = get_rsvp(user_id, event_id)
+
+    if rsvp is None:
+        raise HTTPException(status_code=404,
+                            detail={"code":"Not Found", "message": "not RSVPed to event"})
+
+    with conn.cursor() as cursor:
+        cursor.execute(f"DELETE FROM rsvps WHERE attendee_id = '{user_id}' AND event_id = '{event_id}'")
+        conn.commit()
+    conn.close()
