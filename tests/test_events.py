@@ -17,3 +17,30 @@ def test_get_event_invalid_int_returns_404(client):
     response = client.get("/api/events/-1")
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "Bad Request"
+
+
+def test_event_rsvp_creates_rsvp(client, valid_test_login):
+    token = valid_test_login
+    response = client.post("/api/events/9/rsvp", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 201
+    assert response.json()["rsvp"]["attendee_id"] == 2
+    assert response.json()["rsvp"]["event_id"] == 9
+
+
+def test_rsvp_with_invalid_token_raises_401(client):
+    token = "invalidtoken"
+    response = client.post("/api/events/9/rsvp", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401
+    assert response.json()["code"] == "Not Authenticated"
+
+def test_rsvp_with_invalid_token_raises_401(client, valid_test_login):
+    token = valid_test_login
+    response = client.post("/api/events/999999/rsvp", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "Not Found"
+
+def test_duplicate_rsvp_raises_409(client, valid_test_login):
+    token = valid_test_login
+    response = client.post("/api/events/1/rsvp", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "Conflict"

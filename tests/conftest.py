@@ -19,3 +19,8 @@ def seed_test_db():
 def client():
     return TestClient(app)
 
+@pytest.fixture
+def valid_test_login(client):
+    response = client.post("api/auth/login", json={"email": "bob@example.com", "password": "password123"})
+    token = response.json()["token"]
+    return token

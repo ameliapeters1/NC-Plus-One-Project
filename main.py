@@ -5,6 +5,9 @@ from fastapi.responses import JSONResponse
 from routes.events import router as events_router
 from routes.auth import router as auth_router
 
+from dotenv import load_dotenv
+load_dotenv(".env.development")
+
 
 app = FastAPI(title="Booking API", debug=True)
 app.include_router(events_router)
