@@ -18,22 +18,17 @@ def get_all_events():
                         "ends_at": r[3],
                         "location": r[4]} for r in rows]}
 
-def get_most_recently_created_event_by_user(user_id):
+
+def get_all_events_organised_by_user(user_id):
     conn = get_connection()
-    with conn.cursor() as cursor:
-         cursor.execute("""
-            SELECT * FROM events
-            WHERE organiser_id = %s
-            ORDER BY created_at DESC
-            LIMIT 1""", (user_id,))
-    row = cursor.fetchone()
+    with conn.cursor() as cur:
+        cur.execute("""
+        SELECT id, organiser_id
+        FROM events 
+        WHERE organiser_id = %s""",
+        (user_id,))
+        rows = cur.fetchall()
+        
     conn.close()
         
-    return  {"events":{"id": row[0],
-                       "title": row[1],
-                       "description":row[2],
-                       "starts_at": row[3],
-                       "ends_at": row[4],
-                       "organiser_id": row[5],
-                       "venue_id": row[6],
-                       "created_at":row[7]}}
+    return [row[0] for row in rows]
