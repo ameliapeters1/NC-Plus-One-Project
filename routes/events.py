@@ -1,45 +1,25 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-import jwt
-from datetime import datetime
-from pydantic import BaseModel
 
 from db.connection import get_connection
+from models.events import Event
 from validators.validate_credentials import check_credentials
 from fetch_info.rsvp import get_rsvp
 from validators.validate_time import check_time_format
 from fetch_info.venues import get_venue_ids
+from fetch_info.events import get_all_events, get_most_recently_created_event_by_user
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 bearer_scheme = HTTPBearer()
 
-class Event(BaseModel):
-     title: str
-     description: str
-     starts_at: str
-     ends_at: str
-     venue_id: int
 
 @router.get("")
 def get_events():
     """
     Retrieve all events ordered by their start time in ascending order.
     """
-    conn = get_connection()
-    with conn.cursor() as cur:
-        cur.execute("""SELECT events.id, title, starts_at, ends_at, venues.name 
-        FROM events 
-        INNER JOIN venues ON events.venue_id = venues.id 
-        ORDER BY starts_at ASC""")
-        rows = cur.fetchall()
-    
-    conn.close()
-    
-    return {"events":[{"id": r[0],
-                       "title": r[1],
-                       "starts_at": r[2],
-                       "ends_at": r[3],
-                       "location": r[4]} for r in rows]}
+    events = get_all_events()
+    return events
 
 @router.get("/{id}")
 def get_event_by_id(id:int):
@@ -91,13 +71,8 @@ def rsvp(event_id: int,
 
     user_id = check_credentials(credentials)
 
-    with conn.cursor() as cur:
-        cur.execute("""SELECT events.id, title, starts_at, ends_at, venues.name 
-        FROM events 
-        INNER JOIN venues ON events.venue_id = venues.id 
-        ORDER BY starts_at ASC""")
-        rows = cur.fetchall()
-    event_ids = [row[0] for row in rows]
+    all_events = get_all_events()
+    event_ids = [event["id"] for event in all_events["events"]]
         
     if event_id not in event_ids:
         raise HTTPException(status_code=404,
@@ -115,20 +90,10 @@ def rsvp(event_id: int,
     with conn.cursor() as cursor:
         cursor.execute(insert_statement,(user_id, event_id))
         conn.commit()
+    conn.close()
 
-        cursor.execute("""SELECT id, attendee_id, event_id, created_at
-                    FROM rsvps 
-                    WHERE attendee_id = %s AND event_id = %s""",
-                    (user_id,event_id))
-        row = cursor.fetchone()
-        rsvp = {"id":row[0],
-                "attendee_id":row[1],
-                "event_id":row[2],
-                "created_at":row[3]}
-
-        conn.close
-
-        return {"rsvp": rsvp}
+    created_rsvp = get_rsvp(user_id, event_id)
+    return {"rsvp": created_rsvp}
 
 @router.delete("/{event_id}/rsvp/me", status_code= 204)
 def delete_rsvp(event_id: int, 
@@ -177,24 +142,13 @@ def add_event(body:Event,
         raise HTTPException(status_code=400,
                             detail={"code":"Bad Request", "message":"Start time should be earlier than end time"})
 
-    insert_statement = """INSERT INTO events (title, description, starts_at, ends_at, organiser_id, venue_id) VALUES (%s,%s,%s,%s,%s,%s);"""
-
+    insert_statement = """
+    INSERT INTO events (title, description, starts_at, ends_at, organiser_id, venue_id) 
+    VALUES (%s,%s,%s,%s,%s,%s)
+    RETURNING *;"""
     with conn.cursor() as cursor:
         cursor.execute(insert_statement, (body.title, body.description, body.starts_at, body.ends_at, user_id, body.venue_id))
+        added_event = cursor.fetchone()
         conn.commit()
-
-        cursor.execute("""
-        SELECT * FROM events
-        WHERE organiser_id = %s
-        ORDER BY created_at DESC
-        LIMIT 1""", (user_id,))
-        row = cursor.fetchone()
-
-        return  {"events":{"id": row[0],
-                           "title": row[1],
-                           "description":row[2],
-                           "starts_at": row[3],
-                           "ends_at": row[4],
-                           "organiser_id": row[5],
-                           "venue_id": row[6],
-                           "created_at":row[7]}}
+    conn.close()
+    return added_event

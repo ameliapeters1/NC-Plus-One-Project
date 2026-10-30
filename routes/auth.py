@@ -2,23 +2,13 @@ import os
 os.environ["ENV"] = "development"
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
-from auth.users import get_user
+from models.users import LoginRequest, RegisterRequest
+from fetch_info.users import get_user
 from auth.passwords import verify_password, create_access_token, hash_password
 from db.connection import get_connection
 
-
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-
-class LoginRequest(BaseModel):
-    email:str
-    password:str
-
-class RegisterRequest(BaseModel):
-    name:str
-    email:str
-    password:str
 
 @router.post("/login")
 def login(body:LoginRequest):
@@ -57,16 +47,7 @@ def register(body:RegisterRequest):
     with conn.cursor() as cursor:
         cursor.execute(insert_statement, (email, hash_password(password), name))
         conn.commit()
-
-        cursor.execute("""SELECT id, name, email, created_at
-                FROM users 
-                WHERE email = %s""",
-                (email,))
-        row = cursor.fetchone()
-        user = {"id":row[0],
-                "name":row[1],
-                "email":row[2],
-                "created_at":row[3]}
+        user = get_user(email)
 
     conn.close()
 
