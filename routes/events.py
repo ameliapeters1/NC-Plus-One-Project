@@ -220,3 +220,77 @@ def modify_event(event_id, body: ModifyEvent,
       "venue_id": event[5],
       "organiser_id": event[6],
       "created_at": event[7]}}
+
+@router.get("/{event_id}/attendees", status_code=200)
+def get_event_attendees(
+    event_id: int,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme)
+):
+    """
+    Retrieve the list of attendees for an event.
+    Only the event organiser can access this list.
+    """
+
+    # Authenticate the user
+    user_id = check_credentials(credentials)
+
+    conn = get_connection()
+
+    with conn.cursor() as cursor:
+
+        # Check whether the event exists and retrieve its organiser
+        cursor.execute(
+            "SELECT organiser_id FROM events WHERE id = %s;",
+            (event_id,)
+        )
+        event = cursor.fetchone()
+
+        if event is None:
+            conn.close()
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code": "Not Found",
+                    "message": "Event not found"
+                }
+            )
+
+        organiser_id = event[0]
+
+        # Check whether the authenticated user is the organiser
+        if user_id != organiser_id:
+            conn.close()
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "Forbidden",
+                    "message": "Only the event organiser can view attendees"
+                }
+            )
+
+        # Retrieve attendees without selecting password
+        cursor.execute(
+            """
+            SELECT users.id, users.name, users.email
+            FROM users
+            INNER JOIN rsvps ON users.id = rsvps.attendee_id
+            WHERE rsvps.event_id = %s
+            ORDER BY users.id ASC;
+            """,
+            (event_id,)
+        )
+
+        rows = cursor.fetchall()
+
+    conn.close()
+
+    attendees = [
+        {
+            "id": row[0],
+            "name": row[1],
+            "email": row[2]
+        }
+        for row in rows
+    ]
+
+    return {"attendees": attendees}
