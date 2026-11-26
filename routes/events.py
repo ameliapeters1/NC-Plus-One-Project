@@ -35,7 +35,7 @@ def get_event_by_id(id:int):
     
     conn = get_connection()
     with conn.cursor() as cur:
-        cur.execute("""SELECT events.id, title, description, starts_at, ends_at, name, address, capacity, created_at
+        cur.execute("""SELECT events.id, title, description, starts_at, ends_at, name, address, capacity, created_at, organiser_id
         FROM events 
         INNER JOIN venues ON events.venue_id = venues.id 
         WHERE events.id = %s
@@ -60,7 +60,8 @@ def get_event_by_id(id:int):
                            "location": row[5],
                            "address": row[6],
                            "capacity": row[7],
-                           "created_at": row[8]}}
+                           "created_at": row[8],
+                           "organiser_id":row[9]}}
     
 @router.post("/{event_id}/rsvp", status_code= 201)
 def rsvp(event_id: int, 
