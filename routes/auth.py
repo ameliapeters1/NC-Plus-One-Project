@@ -21,6 +21,9 @@ def login(body:LoginRequest):
     if user is not None and verify_password(body.password,user["password_hash"]): 
             return {
             "token": create_access_token(user["id"]),
+            "user":{"id":user["id"],
+                    "name": user["name"], 
+                    "email":user["email"]}
             }
     else:
         raise HTTPException(status_code=401,
