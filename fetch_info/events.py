@@ -4,7 +4,7 @@ def get_all_events():
     conn = get_connection()
     with conn.cursor() as cur:
         cur.execute("""
-        SELECT events.id, title, starts_at, ends_at, venues.name 
+        SELECT events.id, title, starts_at, ends_at, venues.name, organiser_id
         FROM events 
         INNER JOIN venues ON events.venue_id = venues.id 
         ORDER BY starts_at ASC""")
@@ -16,7 +16,8 @@ def get_all_events():
                         "title": r[1],
                         "starts_at": r[2],
                         "ends_at": r[3],
-                        "location": r[4]} for r in rows]}
+                        "location": r[4],
+                        "organiser_id":r[5]} for r in rows]}
 
 
 def get_all_events_organised_by_user(user_id):
